@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pipeline Console | Thesis Defense</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+    <style>
+        .log-line { border-left: 2px solid transparent; margin-bottom: 4px; padding-left: 8px; font-family: monospace; }
+        /* Custom Terminal Colors */
+        .log-init { color: #f8fafc; border-left-color: #94a3b8; }     /* White: Initialization */
+        .log-input { color: #60a5fa; border-left-color: #3b82f6; }    /* Blue: Input / Ingestion */
+        .log-process { color: #facc15; border-left-color: #eab308; }  /* Yellow: Processing / NLP / ML */
+        .log-output { color: #4ade80; border-left-color: #22c55e; }   /* Green: Output / Completion */
+        .log-error { color: #ef4444; border-left-color: #ef4444; }    /* Red: System Exceptions */
+
+        /* Progress Bar Animation */
+        .step-active .step-icon { background-color: #3b82f6; color: white; border-color: #3b82f6; box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); }
+        .step-completed .step-icon { background-color: #10b981; color: white; border-color: #10b981; }
+        .step-completed .step-line { background-color: #10b981; }
+
+        /* Custom Scrollbar for Matrix */
+        .custom-scroll::-webkit-scrollbar { height: 6px; width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
+
+    <!-- Top Navigation -->
+    <header class="bg-slate-900 border-b border-slate-800 px-8 py-4 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-blue-500 text-3xl">terminal</span>
+            <div>
+                <h1 class="text-lg font-bold text-white tracking-tight">System Evaluation Console</h1>
+                <p class="text-xs text-slate-400 uppercase tracking-widest font-semibold">Thesis Panel Defense Interface</p>
+            </div>
+        </div>
+        <button onclick="terminateSession()" class="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-red-900/50 text-slate-300 hover:text-red-400 rounded-lg text-sm font-bold transition-colors shadow-sm">
+            <span class="material-symbols-outlined text-[18px]">power_settings_new</span> Terminate Session
+        </button>
+    </header>
+
+    <main class="flex-1 p-8 max-w-[1400px] mx-auto w-full flex flex-col gap-8">
+        
+        <!-- Pipeline Progress Bar -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between relative z-0">
+            <div class="absolute top-1/2 left-12 right-12 h-1 bg-slate-100 -z-10 -translate-y-1/2 rounded-full"></div>
+            
+            <div class="step-container text-center group" id="step-1">
+                <div class="step-icon w-12 h-12 mx-auto bg-white border-4 border-slate-200 rounded-full flex items-center justify-center transition-all duration-500 text-slate-400"><span class="material-symbols-outlined">upload_file</span></div>
+                <p class="text-xs font-bold mt-3 text-slate-600">1. Data Ingestion</p>
+            </div>
+            
+            <div class="h-1 bg-slate-200 flex-1 mx-4 rounded-full step-line transition-all duration-500 origin-left" id="line-1"></div>
+
+            <div class="step-container text-center group" id="step-2">
+                <div class="step-icon w-12 h-12 mx-auto bg-white border-4 border-slate-200 rounded-full flex items-center justify-center transition-all duration-500 text-slate-400"><span class="material-symbols-outlined">cleaning_services</span></div>
+                <p class="text-xs font-bold mt-3 text-slate-600">2. Data Preprocessing</p>
+            </div>
+
+            <div class="h-1 bg-slate-200 flex-1 mx-4 rounded-full step-line transition-all duration-500" id="line-2"></div>
+
+            <div class="step-container text-center group" id="step-3">
+                <div class="step-icon w-12 h-12 mx-auto bg-white border-4 border-slate-200 rounded-full flex items-center justify-center transition-all duration-500 text-slate-400"><span class="material-symbols-outlined">memory</span></div>
+                <p class="text-xs font-bold mt-3 text-slate-600">3. BERT Feature Extraction</p>
+            </div>
+
+            <div class="h-1 bg-slate-200 flex-1 mx-4 rounded-full step-line transition-all duration-500" id="line-3"></div>
+
+            <div class="step-container text-center group" id="step-4">
+                <div class="step-icon w-12 h-12 mx-auto bg-white border-4 border-slate-200 rounded-full flex items-center justify-center transition-all duration-500 text-slate-400"><span class="material-symbols-outlined">account_tree</span></div>
+                <p class="text-xs font-bold mt-3 text-slate-600">4. XGBoost Triage Classifier</p>
+            </div>
+
+            <div class="h-1 bg-slate-200 flex-1 mx-4 rounded-full step-line transition-all duration-500" id="line-4"></div>
+
+            <div class="step-container text-center group" id="step-5">
+                <div class="step-icon w-12 h-12 mx-auto bg-white border-4 border-slate-200 rounded-full flex items-center justify-center transition-all duration-500 text-slate-400"><span class="material-symbols-outlined">analytics</span></div>
+                <p class="text-xs font-bold mt-3 text-slate-600">5. Evaluation</p>
+            </div>
+        </div>
+
+        <!-- Symmetrical Main Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 h-[500px]">
+            
+            <!-- Left: Control Panel -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
+                <div class="p-5 border-b border-slate-100 bg-slate-50 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-slate-500 text-[20px]">tune</span>
+                    <h2 class="font-bold text-slate-800">Pipeline Execution Control</h2>
+                </div>
+                <div class="p-8 flex flex-col justify-center items-center h-full gap-6">
+                    <div class="text-center w-full max-w-md">
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Feedback Data File (.csv)</label>
+                        <div class="border-2 border-dashed border-blue-200 bg-blue-50/50 rounded-xl p-8 hover:bg-blue-50 transition-colors cursor-pointer relative">
+                            <input type="file" id="dev-csv-input" accept=".csv" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                            <span class="material-symbols-outlined text-blue-500 text-4xl mb-2">note_add</span>
+                            <p class="text-slate-600 font-semibold" id="file-name-display">Select CSV File</p>
+                        </div>
+                    </div>
+                    
+                    <button id="run-btn" onclick="startPipeline()" class="w-full max-w-md py-4 bg-slate-900 hover:bg-blue-600 text-white font-bold rounded-xl shadow-md transition-all flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span class="material-symbols-outlined">play_arrow</span> Initialize Model Pipeline
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right: System Logs with Color Legend -->
+            <div class="bg-[#0f172a] rounded-2xl shadow-sm border border-slate-800 flex flex-col overflow-hidden relative font-mono">
+                <!-- Terminal Header & Color Legend -->
+                <div class="p-3 border-b border-slate-800 bg-[#1e293b] flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                        <div class="flex gap-1.5 mr-2">
+                            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                        </div>
+                        <span class="text-xs text-slate-400 font-bold hidden sm:inline">triage_engine.py</span>
+                    </div>
+                    <!-- Color Legend Bar (Excluding Initialization White) -->
+                    <div class="flex items-center gap-4 text-[10px] font-bold">
+                        <span class="flex items-center gap-1.5 text-blue-400">
+                            <span class="w-2 h-2 rounded-full bg-blue-400"></span> Input
+                        </span>
+                        <span class="flex items-center gap-1.5 text-yellow-400">
+                            <span class="w-2 h-2 rounded-full bg-yellow-400"></span> Process
+                        </span>
+                        <span class="flex items-center gap-1.5 text-green-400">
+                            <span class="w-2 h-2 rounded-full bg-green-400"></span> Output
+                        </span>
+                    </div>
+                </div>
+                <div id="terminal-output" class="p-5 overflow-y-auto h-full text-xs leading-relaxed flex flex-col justify-end custom-scroll">
+                    <div class="log-init log-line">ISU Triage System Ready. Awaiting payload...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Processed Data Table -->
+        <div id="results-table-section" class="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hidden transition-all duration-500">
+            <div class="p-5 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-blue-600">view_list</span>
+                    <h3 class="font-bold text-slate-800">Pipeline Output Matrix</h3>
+                </div>
+                <span class="text-xs font-bold text-slate-500 bg-slate-200 px-3 py-1 rounded-md border border-slate-300" id="row-count-badge">0 Rows</span>
+            </div>
+            <div class="overflow-x-auto max-h-[300px] overflow-y-auto custom-scroll">
+                <table class="w-full text-left text-sm text-slate-600">
+                    <thead class="bg-white/90 backdrop-blur-md border-b border-slate-100 sticky top-0 z-10 text-[10px] uppercase tracking-widest font-bold">
+                        <tr>
+                            <th class="px-5 py-4 w-2/5">Cleaned Text Extracted</th>
+                            <th class="px-5 py-4">Target Office</th>
+                            <th class="px-5 py-4">Sentiment</th>
+                            <th class="px-5 py-4">Emotion</th>
+                            <th class="px-5 py-4">True Label</th>
+                            <th class="px-5 py-4">Predicted Triage</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-table-body" class="divide-y divide-slate-100"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Routing & Overall Triage Summary Header with Color Legend -->
+        <div id="routing-triage-section" class="hidden transition-all duration-500 space-y-4">
+            <div class="bg-white px-6 py-3 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-blue-600 text-lg">palette</span>
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-700">Card Border Legend (Sentiment Polarity):</span>
+                </div>
+                <div class="flex items-center gap-6 text-xs font-bold">
+                    <span class="flex items-center gap-2 text-red-600">
+                        <span class="w-3 h-3 rounded-full bg-red-500 inline-block shadow-sm"></span> Red = Negative Sentiment
+                    </span>
+                    <span class="flex items-center gap-2 text-slate-600">
+                        <span class="w-3 h-3 rounded-full bg-slate-400 inline-block shadow-sm"></span> Gray = Neutral Sentiment
+                    </span>
+                    <span class="flex items-center gap-2 text-blue-600">
+                        <span class="w-3 h-3 rounded-full bg-blue-500 inline-block shadow-sm"></span> Blue = Positive Sentiment
+                    </span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Target Office Routing -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-col">
+                    <div class="border-b border-slate-100 pb-3 mb-4 flex items-center justify-between">
+                        <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-indigo-600">route</span> Target Office Routing
+                        </h3>
+                    </div>
+                    <div id="office-routing-content" class="space-y-3 overflow-y-auto max-h-[250px] custom-scroll pr-2"></div>
+                </div>
+
+                <!-- Overall Triage Prioritization -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-col">
+                    <div class="border-b border-slate-100 pb-3 mb-4 flex items-center justify-between">
+                        <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-red-500">warning</span> Overall Priority Triage
+                        </h3>
+                    </div>
+                    <div id="overall-triage-content" class="space-y-4 overflow-y-auto max-h-[250px] custom-scroll pr-2"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Dynamic Metrics Grid (Granular Realistic Tier Definitions) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="metrics-grid"></div>
+
+        <!-- Static Training Validation Section -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <h3 class="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <span class="material-symbols-outlined text-blue-600">verified</span> Training Phase Verification
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="p-4 bg-slate-50 border border-slate-100 rounded-xl">
+                    <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Stratified K-Fold Cross-Validation</p>
+                    <p class="text-sm text-slate-700 leading-relaxed">
+                        Evaluated during model compilation to preserve class imbalance ratios across <span class="font-bold text-blue-600">5 folds</span>, proving algorithmic generalization beyond random chance.
+                    </p>
+                </div>
+                <div class="p-4 bg-slate-50 border border-slate-100 rounded-xl">
+                    <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Cohen's Kappa Reliability</p>
+                    <p class="text-sm text-slate-700 leading-relaxed">
+                        Measures inter-rater agreement evaluating if predictions align with human baseline ground truth while factoring out chance agreement.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const fileInput = document.getElementById('dev-csv-input');
+        const fileNameDisplay = document.getElementById('file-name-display');
+        const terminal = document.getElementById('terminal-output');
+        const runBtn = document.getElementById('run-btn');
+        const resultsSection = document.getElementById('results-table-section');
+
+        async function terminateSession() {
+            if(confirm("Terminate the defense panel session and return to the login gateway?")) {
+                try {
+                    await fetch('/api/terminate_developer', { method: 'POST' });
+                    window.location.href = "{{ url_for('main.logout') }}";
+                } catch(e) {
+                    alert("System error during logout.");
+                }
+            }
+        }
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                fileNameDisplay.innerHTML = `<span class="text-blue-700 font-bold">${e.target.files[0].name}</span>`;
+            }
+        });
+
+        function addLog(message, type = 'init') {
+            const div = document.createElement('div');
+            div.className = `log-line log-${type}`;
+            div.innerText = `[${new Date().toLocaleTimeString()}] ${message}`;
+            terminal.appendChild(div);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        function setStep(stepNum, status) {
+            const step = document.getElementById(`step-${stepNum}`);
+            if (status === 'active') {
+                step.classList.add('step-active');
+            } else if (status === 'completed') {
+                step.classList.remove('step-active');
+                step.classList.add('step-completed');
+                const line = document.getElementById(`line-${stepNum}`);
+                if (line) line.classList.add('step-completed');
+            }
+        }
+
+        function renderTable(results) {
+            const tbody = document.getElementById('results-table-body');
+            document.getElementById('row-count-badge').innerText = `${results.length} Rows Extracted`;
+            
+            tbody.innerHTML = results.map(row => {
+                let pBadge = row.predicted_priority === 'Critical' ? 'bg-red-100 text-red-800 border-red-200' : (row.predicted_priority === 'Moderate' ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-slate-100 text-slate-700 border-slate-200');
+                let tBadge = row.true_priority === 'Critical' ? 'text-red-600 font-bold' : 'text-slate-600 font-semibold';
+                
+                let matchIcon = '';
+                if(row.true_priority !== "N/A") {
+                    matchIcon = row.true_priority.toLowerCase() === row.predicted_priority.toLowerCase() 
+                        ? '<span class="material-symbols-outlined text-green-500 text-[16px]">check_circle</span>' 
+                        : '<span class="material-symbols-outlined text-red-400 text-[16px]">cancel</span>';
+                }
+
+                return `
+                    <tr class="hover:bg-slate-50/80 transition-colors">
+                        <td class="px-5 py-4 text-xs text-slate-800 leading-relaxed font-medium">
+                            <div class="line-clamp-2" title="${row.text}">${row.text}</div>
+                        </td>
+                        <td class="px-5 py-4 whitespace-nowrap text-[11px] font-bold text-slate-600 uppercase tracking-wider">${row.office}</td>
+                        <td class="px-5 py-4 whitespace-nowrap text-xs text-slate-600">${row.sentiment}</td>
+                        <td class="px-5 py-4 whitespace-nowrap text-xs text-slate-600">${row.emotion}</td>
+                        <td class="px-5 py-4 whitespace-nowrap text-xs ${tBadge}">${row.true_priority}</td>
+                        <td class="px-5 py-4 whitespace-nowrap flex items-center gap-2">
+                            <span class="px-2 py-1 rounded-[4px] border font-bold uppercase tracking-wider text-[10px] ${pBadge}">${row.predicted_priority}</span>
+                            ${matchIcon}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            
+            resultsSection.classList.remove('hidden');
+        }
+
+        async function startPipeline() {
+            if (fileInput.files.length === 0) {
+                alert("Please upload a Ground Truth CSV file.");
+                return;
+            }
+
+            runBtn.disabled = true;
+            terminal.innerHTML = '';
+            resultsSection.classList.add('hidden');
+            document.getElementById('routing-triage-section').classList.add('hidden');
+            document.querySelectorAll('.step-container').forEach(el => el.className = 'step-container text-center group');
+            document.querySelectorAll('.step-line').forEach(el => el.className = 'h-1 bg-slate-200 flex-1 mx-4 rounded-full step-line transition-all duration-500');
+            document.getElementById('metrics-grid').innerHTML = '';
+
+            const formData = new FormData();
+            formData.append('csv_file', fileInput.files[0]);
+
+            // White: System Initialization
+            addLog("Executing System Initialization...", 'init');
+            
+            try {
+                const response = await fetch('/api/run_pipeline', { method: 'POST', body: formData });
+                
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.error || "Server processing failed.");
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder("utf-8");
+                let buffer = "";
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop(); 
+                    
+                    for (let line of lines) {
+                        if (!line.trim()) continue;
+                        const data = JSON.parse(line);
+                        
+                        if (data.status === 'progress') {
+                            if (data.step > 1) setStep(data.step - 1, 'completed');
+                            setStep(data.step, 'active');
+                            
+                            // Blue for Step 1 (Input/Ingestion), Yellow for Steps 2-5 (Process)
+                            let logColor = (data.step === 1) ? 'input' : 'process';
+                            addLog(data.log, logColor);
+                        } 
+                        else if (data.status === 'error') {
+                            throw new Error(data.error);
+                        } 
+                        else if (data.status === 'complete') {
+                            setStep(5, 'completed');
+                            // Green: Output execution & metrics logging
+                            addLog(`Successfully processed ${data.rows_processed} records.`, 'output');
+                            addLog("Output Matrix generated successfully.", 'output');
+                            
+                            if(data.results_data) {
+                                renderTable(data.results_data);
+                                renderTriageRoutingSummary(data.results_data);
+                            }
+                            
+                            if(data.metrics && data.metrics.evaluated > 0) {
+                                addLog(`Accuracy: ${data.metrics.accuracy}%`, 'output');
+                                addLog(`Macro-F1 Score: ${data.metrics.macro_f1}%`, 'output');
+                                renderMetrics(data.runtime, data.metrics);
+                            } else {
+                                addLog("Evaluation completed, but no Ground Truth 'Priority' column was found.", 'process');
+                            }
+                            runBtn.disabled = false;
+                        }
+                    }
+                }
+
+            } catch (error) {
+                addLog(`CRITICAL FAILURE: ${error.message}`, 'error');
+                runBtn.disabled = false;
+            }
+        }
+
+        function renderTriageRoutingSummary(results) {
+            const routingSection = document.getElementById('routing-triage-section');
+            const officeContainer = document.getElementById('office-routing-content');
+            const triageContainer = document.getElementById('overall-triage-content');
+            
+            const groupedOffices = {};
+            const standardOffices = ['Infirmary', 'Library', 'OSAS', 'Admin', 'Unassigned'];
+            standardOffices.forEach(office => groupedOffices[office] = []);
+
+            results.forEach(r => {
+                let off = r.office || 'Unassigned';
+                if(!groupedOffices[off]) groupedOffices[off] = [];
+                groupedOffices[off].push(r);
+            });
+
+            const sortedOffices = Object.keys(groupedOffices).sort();
+            
+            officeContainer.innerHTML = sortedOffices.map((office, idx) => {
+                const feedbacks = groupedOffices[office];
+                const contentId = `office-content-${idx}`;
+                
+                let feedbacksHtml = '';
+                if (feedbacks.length === 0) {
+                    feedbacksHtml = `<p class="text-xs font-semibold text-slate-400 text-center py-4 uppercase tracking-wider">No designated feedbacks.</p>`;
+                } else {
+                    feedbacksHtml = feedbacks.map(f => {
+                        let pBadge = f.predicted_priority === 'Critical' ? 'bg-red-100 text-red-800 border-red-200' : (f.predicted_priority === 'Moderate' ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-slate-100 text-slate-700 border-slate-200');
+                        let sColor = f.sentiment === 'Negative' ? 'text-red-600' : (f.sentiment === 'Positive' ? 'text-emerald-600' : 'text-slate-600');
+                        
+                        return `
+                            <div class="bg-white p-3 rounded-lg border border-slate-200 shadow-sm flex flex-col gap-2">
+                                <div class="flex flex-wrap gap-1.5 items-center">
+                                    <span class="px-1.5 py-0.5 rounded-[4px] border font-bold uppercase tracking-wider text-[8px] ${pBadge}">${f.predicted_priority}</span>
+                                    <span class="px-1.5 py-0.5 rounded-[4px] border border-slate-200 bg-slate-50 font-semibold text-[9px] ${sColor}">${f.sentiment}</span>
+                                    <span class="px-1.5 py-0.5 rounded-[4px] border border-slate-200 bg-slate-50 font-semibold text-[9px] text-slate-700">${f.emotion}</span>
+                                </div>
+                                <div class="text-xs text-slate-800 leading-relaxed" title="${f.text}">
+                                    "${f.text}"
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                let headerBadgeStyle = feedbacks.length > 0 ? 'bg-indigo-50 border-indigo-100 text-indigo-700' : 'bg-slate-50 border-slate-200 text-slate-400';
+
+                return `
+                    <div class="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
+                        <button onclick="document.getElementById('${contentId}').classList.toggle('hidden')" class="w-full flex items-center justify-between p-3 hover:bg-slate-50 transition-colors focus:outline-none">
+                            <span class="text-sm font-bold text-slate-800">${office}</span>
+                            <span class="text-[11px] font-bold border px-2.5 py-1 rounded-md uppercase tracking-wider ${headerBadgeStyle}">${feedbacks.length} REPORTS</span>
+                        </button>
+                        <div id="${contentId}" class="hidden flex flex-col gap-2 p-3 border-t border-slate-100 bg-slate-50/50">
+                            ${feedbacksHtml}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+                
+            const priorityWeights = { 'Critical': 3, 'Moderate': 2, 'Low': 1 };
+            const officeOrder = { 'Infirmary': 1, 'OSAS': 2, 'Admin': 3, 'Library': 4 };
+
+            const rankedResults = results.map((r, idx) => ({ ...r, _idx: idx })).sort((a, b) => {
+                const diffPriority = (priorityWeights[b.predicted_priority] || 0) - (priorityWeights[a.predicted_priority] || 0);
+                if (diffPriority !== 0) return diffPriority;
+
+                const orderA = officeOrder[a.office] || 5;
+                const orderB = officeOrder[b.office] || 5;
+                if (orderA !== orderB) return orderA - orderB;
+
+                if (a.date_submitted && b.date_submitted && a.date_submitted !== "None" && b.date_submitted !== "None") {
+                    const dateA = new Date(a.date_submitted);
+                    const dateB = new Date(b.date_submitted);
+                    if (!isNaN(dateA) && !isNaN(dateB) && dateA.getTime() !== dateB.getTime()) {
+                        return dateA.getTime() - dateB.getTime();
+                    }
+                }
+                return (a.original_index ?? a._idx) - (b.original_index ?? b._idx);
+            });
+
+            if (rankedResults.length === 0) {
+                triageContainer.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">No triage data available.</p>`;
+            } else {
+                triageContainer.innerHTML = rankedResults.map((r, index) => {
+                    let pBadge = r.predicted_priority === 'Critical' ? 'bg-red-100 text-red-800 border-red-200' : (r.predicted_priority === 'Moderate' ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-slate-100 text-slate-700 border-slate-200');
+                    let sColor = r.sentiment === 'Negative' ? 'text-red-600' : (r.sentiment === 'Positive' ? 'text-emerald-600' : 'text-slate-600');
+                    let isTop = index === 0;
+                    
+                    let borderLeftColor = r.sentiment === 'Negative' ? 'border-l-red-500' : (r.sentiment === 'Positive' ? 'border-l-blue-500' : 'border-l-slate-400');
+                    let cardClasses = isTop 
+                        ? `p-4 bg-white border border-slate-300 rounded-xl shadow-sm flex flex-col gap-3 relative overflow-hidden border-l-[4px] ${borderLeftColor}` 
+                        : `p-3.5 bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col gap-2.5 hover:shadow-md transition-shadow border-l-[4px] ${borderLeftColor}`;
+                    let topBadge = isTop ? `<span class="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg shadow-sm uppercase tracking-wider">Top Priority</span>` : '';
+                    let textClass = isTop ? 'text-[13px] font-semibold text-slate-900 mt-1' : 'text-xs text-slate-800';
+
+                    return `
+                        <div class="${cardClasses} my-1">
+                            ${topBadge}
+                            <div class="flex flex-wrap gap-2 items-center">
+                                <span class="px-2 py-1 rounded-[4px] font-bold uppercase tracking-wider text-[9px] bg-slate-800 text-white shadow-sm">${r.office}</span>
+                                <span class="px-2 py-1 rounded-[4px] border font-bold uppercase tracking-wider text-[9px] ${pBadge}">${r.predicted_priority}</span>
+                                <span class="px-2 py-1 rounded-[4px] border border-slate-200 bg-slate-50 font-semibold text-[10px] ${sColor} flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-[12px]">analytics</span> ${r.sentiment}
+                                </span>
+                                <span class="px-2 py-1 rounded-[4px] border border-slate-200 bg-slate-50 font-semibold text-[10px] text-slate-700 flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-[12px]">mood</span> ${r.emotion}
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-1 text-[10px] text-slate-500">
+                                <span class="material-symbols-outlined text-[12px]">schedule</span>
+                                <span>Submitted ${r.date_submitted || 'Time unavailable'}</span>
+                            </div>
+                            <p class="${textClass} leading-relaxed" title="${r.text}">"${r.text}"</p>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            routingSection.classList.remove('hidden');
+        }
+
+        function renderMetrics(runtime, m) {
+            const grid = document.getElementById('metrics-grid');
+            
+            const items = [
+                { 
+                    label: 'Computational Runtime', val: `${runtime}s`, color: 'text-blue-600', icon: 'timer',
+                    desc: 'Inference speed per batch execution. Verifies real-time capacity without queuing bottlenecks.',
+                    tiers: [
+                        { r: '< 1.0s', m: 'Real-Time Processing (Optimal live throughput)' },
+                        { r: '1.0s - 3.0s', m: 'Acceptable Latency (Moderate batch queuing)' },
+                        { r: '> 3.0s', m: 'Computational Bottleneck (Requires throttling)' }
+                    ]
+                },
+                { 
+                    label: 'Accuracy', val: `${m.accuracy}%`, color: 'text-green-600', icon: 'check_circle',
+                    desc: 'Total exact classification matches across all priority tiers (Low, Moderate, Critical).',
+                    tiers: [
+                        { r: '91% - 100%', m: 'Optimal Alignment (Production-ready triage)' },
+                        { r: '80% - 90%', m: 'Operational Variance (Minor tier boundary overlap)' },
+                        { r: '60% - 79%', m: 'Suboptimal Separation (Requires model retraining)' },
+                        { r: '< 60%', m: 'Algorithmic Failure (Unreliable routing logic)' }
+                    ]
+                },
+                { 
+                    label: 'Precision', val: `${m.precision}%`, color: 'text-indigo-600', icon: 'my_location',
+                    desc: 'Proportion of flagged "Critical" tickets that were genuinely urgent (False Alarm control).',
+                    tiers: [
+                        { r: '91% - 100%', m: 'Minimal False Alarms (High emergency trust)' },
+                        { r: '80% - 90%', m: 'Moderate False Alarm Rate (Occasional misrouting)' },
+                        { r: '65% - 79%', m: 'Elevated Noise (Offices receive non-urgent tickets)' },
+                        { r: '< 65%', m: 'Alert Fatigue Risk (Over-predicts emergencies)' }
+                    ]
+                },
+                { 
+                    label: 'Recall', val: `${m.recall}%`, color: 'text-amber-600', icon: 'assignment_return',
+                    desc: 'Proportion of true Critical emergencies successfully detected (Safety Net capability).',
+                    tiers: [
+                        { r: '95% - 100%', m: 'Zero Critical Misses (Robust emergency capture)' },
+                        { r: '85% - 94%', m: 'Minor Escalate Leakage (Rare urgent reports missed)' },
+                        { r: '70% - 84%', m: 'Compromised Safety Net (Noticeable missed emergencies)' },
+                        { r: '< 70%', m: 'Critical Blindness (Systemic omission of high risk)' }
+                    ]
+                },
+                { 
+                    label: 'Macro-F1 Score', val: `${m.macro_f1}%`, color: 'text-purple-600', icon: 'functions',
+                    desc: 'Harmonic mean across unweighted classes. Proves minority class detection without majority bias.',
+                    tiers: [
+                        { r: '90% - 100%', m: 'Unbiased Sensitivity (Balanced across rare & common)' },
+                        { r: '80% - 89%', m: 'Minor Class Skew (Slight drop on minority tiers)' },
+                        { r: '65% - 79%', m: 'Majority Domination (Favors common moderate reports)' },
+                        { r: '< 65%', m: 'Severe Class Blindness (Fails rare priority levels)' }
+                    ]
+                },
+                { 
+                    label: 'Cohen\'s Kappa (\u03BA)', val: m.kappa, color: 'text-rose-600', icon: 'balance',
+                    desc: 'Measures inter-rater reliability between the AI and human ground truth beyond chance agreement.',
+                    tiers: [
+                        { r: '0.81 - 1.00', m: 'Near-Perfect Expert Parity (Matches human ground truth)' },
+                        { r: '0.61 - 0.80', m: 'Substantial Concordance (Strong structural agreement)' },
+                        { r: '0.41 - 0.60', m: 'Moderate Alignment (Noticeable divergence)' },
+                        { r: '< 0.40', m: 'Chance Agreement (Lacks consistent triage logic)' }
+                    ]
+                },
+            ];
+
+            grid.innerHTML = items.map(i => `
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col hover:shadow-md transition-shadow">
+                    <div class="flex items-center gap-3 mb-3 pb-3 border-b border-slate-100">
+                        <span class="material-symbols-outlined text-slate-400 text-3xl">${i.icon}</span>
+                        <p class="text-sm font-bold text-slate-800 uppercase tracking-wide">${i.label}</p>
+                        <p class="text-2xl font-black ${i.color} ml-auto">${i.val}</p>
+                    </div>
+                    <p class="text-xs text-slate-600 leading-relaxed mb-4 flex-grow">${i.desc}</p>
+                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Metric Range Operational Meaning</p>
+                        <div class="space-y-1">
+                            ${i.tiers.map(t => `
+                                <div class="flex text-[10px] leading-tight">
+                                    <span class="font-bold text-slate-700 w-20 shrink-0">${t.r}:</span>
+                                    <span class="text-slate-600">${t.m}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>

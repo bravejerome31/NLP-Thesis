@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feedback Triage | System Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+    <style>
+        html { scroll-behavior: smooth; }
+        .bg-mesh {
+            background-color: #f8fafc;
+            background-image: radial-gradient(at 40% 20%, hsla(210, 100%, 95%, 0.8) 0px, transparent 50%),
+                              radial-gradient(at 80% 0%, hsla(220, 100%, 95%, 0.8) 0px, transparent 50%),
+                              radial-gradient(at 0% 50%, hsla(215, 100%, 95%, 0.8) 0px, transparent 50%);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased selection:bg-blue-200 selection:text-blue-900 overflow-x-hidden flex flex-col min-h-screen">
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div id="flash-container" class="fixed top-24 left-1/2 -translate-x-1/2 z-[100] space-y-2 w-full max-w-md px-4 flex flex-col items-center pointer-events-none">
+                {% for category, msg in messages %}
+                    <div class="flash-message transition-all duration-500 ease-out opacity-100 scale-100 translate-y-0 p-4 rounded-2xl text-sm font-bold border shadow-lg text-center w-full pointer-events-auto backdrop-blur-sm {% if category == 'error' %} bg-red-50/90 text-red-700 border-red-200 {% else %} bg-green-50/90 text-green-700 border-green-200 {% endif %}">
+                        {{ msg }}
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <script>
+                document.addEventListener("DOMContentLoaded", function() {
+                    const flashMessages = document.querySelectorAll('.flash-message');
+                    flashMessages.forEach(msg => {
+                        setTimeout(() => {
+                            // Morph out animation classes
+                            msg.classList.remove('opacity-100', 'scale-100', 'translate-y-0');
+                            msg.classList.add('opacity-0', 'scale-95', '-translate-y-4', 'blur-sm');
+                            
+                            // Remove from DOM after the 500ms transition finishes
+                            setTimeout(() => msg.remove(), 500); 
+                        }, 5000); // 5000ms = 5 seconds
+                    });
+                });
+            </script>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Centered Navigation -->
+    <nav class="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-lg border-b border-slate-100">
+        <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-blue-600 text-3xl">analytics</span>
+                <span class="text-xl font-bold text-slate-900 tracking-tight">Student Feedback Triage</span>
+            </div>
+            <div class="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-600">
+                <a href="#overview" class="hover:text-blue-600 transition-colors">Overview</a>
+                <a href="#how-it-works" class="hover:text-blue-600 transition-colors">How it Works</a>
+                <a href="#about-us" class="hover:text-blue-600 transition-colors">About Us</a>
+            </div>
+            <div>
+                <a href="#login-section" onclick="toggleAuthMode('login')" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-full shadow-sm transition-all">
+                    Log In
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-grow pt-28 pb-16 px-6 space-y-12 lg:space-y-24">
+        
+        <!-- Main Hero Banner (Standalone) -->
+        <section class="max-w-5xl mx-auto w-full">
+            <div class="bg-mesh rounded-[48px] p-12 md:p-20 border border-slate-200 shadow-sm text-center relative overflow-hidden">
+                <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white border border-yellow-200 shadow-sm mb-8 relative z-10">
+                    <span class="material-symbols-outlined text-yellow-500 text-[18px]">workspace_premium</span>
+                    <span class="text-xs font-bold text-slate-700 tracking-wide uppercase">NLP Feedback Analysis</span>
+                </div>
+                <h1 class="text-4xl md:text-6xl font-extrabold text-slate-900 leading-[1.1] tracking-tight mb-6 relative z-10">
+                    Turn Student Feedback <br/> Into Actionable Priorities
+                </h1>
+                <p class="text-lg text-slate-600 leading-relaxed max-w-2xl mx-auto mb-10 relative z-10">
+                    A multilingual feedback triage system that analyzes student concerns, identifies sentiment and emotion, and assigns Low, Moderate, or Critical priority for the appropriate campus office.
+                </p>
+                <div class="relative z-10">
+                    <!-- Triggers registration mode and scrolls down -->
+                    <a href="#login-section" onclick="toggleAuthMode('register')" class="inline-block px-10 py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-full shadow-lg transition-all">
+                        Get Started
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Project Overview Section -->
+        <section id="overview" class="max-w-5xl mx-auto w-full scroll-mt-24">
+            <div class="bg-blue-50/50 rounded-[48px] p-12 md:p-16 border border-blue-100 shadow-sm flex flex-col md:flex-row items-center gap-12">
+                <div class="w-full md:w-1/2 text-center md:text-left">
+                    <h2 class="text-3xl font-bold text-slate-900 mb-4 tracking-tight">About the Project</h2>
+                    <p class="text-slate-600 leading-relaxed mb-6">
+                        The system converts unstructured student feedback into organized triage records. It cleans each message, preserves useful punctuation and capitalization signals, analyzes the text with multilingual XLM-RoBERTa models, and combines those outputs with office and surface-text features through XGBoost.
+                    </p>
+                </div>
+                <div class="w-full md:w-1/2 flex justify-center">
+                    <div class="w-full h-64 bg-white rounded-[32px] border border-blue-200 shadow-sm flex items-center justify-center">
+                        <span class="material-symbols-outlined text-7xl text-blue-300">account_tree</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- How It Works Section -->
+        <section id="how-it-works" class="max-w-5xl mx-auto w-full scroll-mt-24">
+            <div class="bg-white rounded-[48px] p-12 md:p-16 border border-slate-100 shadow-sm">
+                <h2 class="text-3xl font-bold text-center text-slate-900 mb-12 tracking-tight">How the Engine Works</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <!-- Card 1 -->
+                    <div class="text-center p-6 rounded-[32px] bg-slate-50 border border-slate-100 hover:shadow-md transition-all">
+                        <div class="w-16 h-16 mx-auto bg-blue-100 rounded-2xl flex items-center justify-center mb-6 text-blue-600">
+                            <span class="material-symbols-outlined text-3xl">travel_explore</span>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-900 mb-3">1. Data Ingestion</h3>
+                        <p class="text-sm text-slate-600 leading-relaxed">Upload a CSV containing student feedback and, when available, its target office and evaluation labels.</p>
+                    </div>
+                    <!-- Card 2 -->
+                    <div class="text-center p-6 rounded-[32px] bg-slate-50 border border-slate-100 hover:shadow-md transition-all">
+                        <div class="w-16 h-16 mx-auto bg-indigo-100 rounded-2xl flex items-center justify-center mb-6 text-indigo-600">
+                            <span class="material-symbols-outlined text-3xl">memory</span>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-900 mb-3">2. XLM-R Analysis</h3>
+                        <p class="text-sm text-slate-600 leading-relaxed">Multilingual XLM-RoBERTa models produce sentiment, emotion, and initial priority signals from each message.</p>
+                    </div>
+                    <!-- Card 3 -->
+                    <div class="text-center p-6 rounded-[32px] bg-slate-50 border border-slate-100 hover:shadow-md transition-all">
+                        <div class="w-16 h-16 mx-auto bg-emerald-100 rounded-2xl flex items-center justify-center mb-6 text-emerald-600">
+                            <span class="material-symbols-outlined text-3xl">sort</span>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-900 mb-3">3. XGBoost Triage</h3>
+                        <p class="text-sm text-slate-600 leading-relaxed">XGBoost combines model signals, office encoding, confidence, and text-intensity features to assign a priority tier.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- About Us (Developers) Section -->
+        <section id="about-us" class="max-w-5xl mx-auto w-full scroll-mt-24">
+            <div class="bg-white rounded-[48px] p-12 md:p-16 border border-slate-100 shadow-sm">
+                <h2 class="text-3xl font-bold text-center text-slate-900 mb-12 tracking-tight">Meet the Developers</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    
+                    <!-- Developer 1 -->
+                    <div class="text-center p-8 rounded-[32px] bg-slate-50 border border-slate-100 hover:shadow-md transition-all">
+                        <!-- Replace the span below with your image tag: <img src="path/to/pic.jpg" alt="Profile" class="w-full h-full object-cover"> -->
+                        <div class="w-24 h-24 mx-auto bg-slate-200 rounded-full flex items-center justify-center mb-6 overflow-hidden border-4 border-white shadow-sm">
+                            <span class="material-symbols-outlined text-4xl text-slate-400">person</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-slate-900 mb-1">Brave Jerome D. Garay</h3>
+                        <p class="text-xs font-bold text-blue-600 uppercase tracking-wide mb-4">Lead Developer / AI Integration</p>
+                        <p class="text-sm text-slate-600 leading-relaxed">
+                            Computer Science student specializing in the NLP pipeline, model integration, and backend system architecture.
+                        </p>
+                    </div>
+
+                    <!-- Developer 2 -->
+                    <div class="text-center p-8 rounded-[32px] bg-slate-50 border border-slate-100 hover:shadow-md transition-all">
+                        <!-- Replace the span below with your image tag: <img src="path/to/pic.jpg" alt="Profile" class="w-full h-full object-cover"> -->
+                        <div class="w-24 h-24 mx-auto bg-slate-200 rounded-full flex items-center justify-center mb-6 overflow-hidden border-4 border-white shadow-sm">
+                            <span class="material-symbols-outlined text-4xl text-slate-400">person</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-slate-900 mb-1">Angel Nayga</h3>
+                        <p class="text-xs font-bold text-blue-600 uppercase tracking-wide mb-4">Co-Developer / UI & UX Data</p>
+                        <p class="text-sm text-slate-600 leading-relaxed">
+                            Computer Science student focusing on data analysis, interface design, and quality assurance testing for the triage workflow.
+                        </p>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- Centered Login/Register Section -->
+        <section id="login-section" class="max-w-md mx-auto w-full scroll-mt-24">
+            <div class="bg-white p-10 rounded-[40px] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] border border-slate-200 relative z-10 transition-all duration-300">
+                <div class="text-center mb-8">
+                    <div class="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <span class="material-symbols-outlined text-blue-600 text-2xl">shield_person</span>
+                    </div>
+                    <h4 id="auth-title" class="text-2xl font-bold text-slate-900">Welcome Back</h4>
+                    <p id="auth-subtitle" class="text-sm text-slate-500 mt-1">Authenticate your credentials.</p>
+                </div>
+  
+                <form action="{{ url_for('main.login') }}" method="POST" class="space-y-4">
+                    <input type="hidden" name="action" id="auth-action" value="login">
+                    <!-- My task 1 -->
+                    <div id="name-field" class="hidden space-y-4">
+                        <input type="text" name="first_name" class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all" placeholder="First Name">
+                        <input type="text" name="middle_name" class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all" placeholder="Middle Name (Optional)">
+                        <input type="text" name="last_name" class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all" placeholder="Last Name">
+                    </div>
+                    <div>
+                        <input type="email" name="email" required class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all" placeholder="Institutional Email">
+                    </div>
+                    <div>
+                        <input type="password" name="password" required class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all" placeholder="Password">
+                    </div>
+                    <!-- My task 2 -->
+                    <div id="confirm-password-field" class="hidden">
+                        <input type="password" name="confirm_password" class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all" placeholder="Confirm Password">
+                    </div>
+                    
+                    <div id="remember-forgot-row" class="flex justify-between items-center px-1">
+                        <label class="flex items-center text-xs text-slate-600 cursor-pointer">
+                            <input type="checkbox" class="mr-2 rounded border-slate-300 text-blue-600 focus:ring-blue-500"> Remember me
+                        </label>
+                        <a href="#" class="text-xs font-bold text-blue-600 hover:text-blue-700">Forgot password?</a>
+                    </div>
+
+                    <button type="submit" class="w-full py-4 mt-2 bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold rounded-full shadow-md transition-all flex justify-center items-center gap-2 group">
+                        <span id="submit-btn-text">Sign In</span> <span class="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                    </button>
+                </form>
+
+                <div class="mt-8 pt-6 border-t border-slate-100 text-center">
+                    <p id="auth-toggle-text" class="text-sm text-slate-600">
+                        Don't have an account? 
+                        <a href="javascript:void(0)" onclick="toggleAuthMode('register')" class="font-bold text-blue-600 hover:text-blue-800 transition-colors ml-1">Create account</a>
+                    </p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Structured Footer -->
+    <footer class="bg-slate-900 pt-16 pb-8 text-slate-400 border-t border-slate-800 mt-auto">
+        <div class="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-12 mb-12 text-center md:text-left">
+            
+            <!-- Brand -->
+            <div>
+                <div class="flex items-center justify-center md:justify-start gap-2 mb-4">
+                    <span class="material-symbols-outlined text-blue-500 text-3xl">analytics</span>
+                    <span class="text-xl font-bold text-white tracking-tight">Student Feedback Triage</span>
+                </div>
+                <p class="text-sm leading-relaxed text-slate-500 max-w-xs mx-auto md:mx-0">
+                    An Automated NLP Framework designed for systemic evaluation and routing of institutional feedback.
+                </p>
+            </div>
+
+            <!-- Academic Affiliation -->
+            <div>
+                <h4 class="text-white font-bold mb-4">Academic Details</h4>
+                <ul class="space-y-2 text-sm">
+                    <li class="flex items-center justify-center md:justify-start gap-2">
+                        <span class="material-symbols-outlined text-[16px]">school</span> Isabela State University
+                    </li>
+                    <li class="flex items-center justify-center md:justify-start gap-2">
+                        <span class="material-symbols-outlined text-[16px]">domain</span> College of Computing Studies
+                    </li>
+                    <li class="flex items-center justify-center md:justify-start gap-2">
+                        <span class="material-symbols-outlined text-[16px]">terminal</span> BS Computer Science
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Contact Information -->
+            <div>
+                <h4 class="text-white font-bold mb-4">Contact Information</h4>
+                <ul class="space-y-2 text-sm">
+                    <li class="flex items-center justify-center md:justify-start gap-2">
+                        <span class="material-symbols-outlined text-[16px]">mail</span> admin@isu.edu.ph
+                    </li>
+                    <li class="flex items-center justify-center md:justify-start gap-2">
+                        <span class="material-symbols-outlined text-[16px]">support_agent</span> support@isu.edu.ph
+                    </li>
+                    <li class="flex items-center justify-center md:justify-start gap-2">
+                        <span class="material-symbols-outlined text-[16px]">location_on</span> San Mateo Campus
+                    </li>
+                </ul>
+            </div>
+
+        </div>
+        <div class="max-w-6xl mx-auto px-6 pt-8 border-t border-slate-800 text-center text-slate-600 text-sm">
+            &copy; 2026 Student Feedback Triage System. All rights reserved.
+        </div>
+    </footer>
+
+    <!-- Form Toggle Script -->
+    <script>
+        function toggleAuthMode(mode) {
+            const title = document.getElementById('auth-title');
+            const subtitle = document.getElementById('auth-subtitle');
+            const nameField = document.getElementById('name-field');
+            const confirmPasswordField = document.getElementById('confirm-password-field');
+            const submitBtnText = document.getElementById('submit-btn-text');
+            const toggleText = document.getElementById('auth-toggle-text');
+            const rememberRow = document.getElementById('remember-forgot-row');
+            const actionInput = document.getElementById('auth-action');
+
+            if (mode === 'register') {
+                actionInput.value = 'register';
+                title.innerText = 'Create Account';
+                subtitle.innerText = 'Register your system credentials.';
+                nameField.classList.remove('hidden');
+                nameField.querySelector('input[name="first_name"]').setAttribute('required', 'true');
+                nameField.querySelector('input[name="last_name"]').setAttribute('required', 'true');
+                confirmPasswordField.classList.remove('hidden');
+                confirmPasswordField.querySelector('input').setAttribute('required', 'true');
+                rememberRow.classList.add('hidden');
+                submitBtnText.innerText = 'Register';
+                toggleText.innerHTML = 'Already have an account? <a href="javascript:void(0)" onclick="toggleAuthMode(\'login\')" class="font-bold text-blue-600 hover:text-blue-800 ml-1">Sign in</a>';
+            } else {
+                actionInput.value = 'login';
+                title.innerText = 'Welcome Back';
+                subtitle.innerText = 'Authenticate your credentials.';
+                nameField.classList.add('hidden');
+                nameField.querySelector('input[name="first_name"]').removeAttribute('required');
+                nameField.querySelector('input[name="last_name"]').removeAttribute('required');
+                confirmPasswordField.classList.add('hidden');
+                confirmPasswordField.querySelector('input').removeAttribute('required');
+                rememberRow.classList.remove('hidden');
+                submitBtnText.innerText = 'Sign In';
+                toggleText.innerHTML = 'Don\'t have an account? <a href="javascript:void(0)" onclick="toggleAuthMode(\'register\')" class="font-bold text-blue-600 hover:text-blue-800 ml-1">Create account</a>';
+            }
+        }
+    </script>
+</body>
+</html>
